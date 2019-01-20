@@ -1,0 +1,76 @@
+---
+# Perform a rolling restart of an Elasticsearch cluster
+# as documented in https://www.elastic.co/guide/en/elasticsearch/guide/current/_rolling_restarts.html
+# e.g. ansible-playbook -e "service_status=stopped sleep=10 cluster_group=mal_es_p"
+- name: Rolling restart Elasticsearch cluster
+  hosts: "{{ cluster_group }}"
+  serial: 1
+  vars:
+    # Desired state of the Elasticsearch service. E.g. stopped or restarted
+    service_status: restarted
+    # Number of attempts to wait for each task to succeed.
+    retries: 200
+
+    # Request payload to disable automatic shard allocation.
+    disable_rebalancing: "-d '{\"transient\" : {\"cluster.routing.allocation.enable\" : \"none\" }}'"
+    # Request payload to enable automatic shard allocation.
+    enable_rebalancing: "-d '{\"transient\" : {\"cluster.routing.allocation.enable\" : \"all\" }}'"
+    # Curl request to manage shard allocation.
+    manage_rebalancing: "curl -XPUT {{ ansible_hostname }}:9200/_cluster/settings -d '{{ disable_rebalancing_data }}'"
+
+  tasks:
+    # Prevent Elasticsearch from moving shards around while we perform planned maintenance.
+    - name: Disable cluster routing
+      shell: "{{ manage_rebalancing }}" "{{ disable_rebalancing }}"
+      register: result
+      until: result.stdout.find('"acknowledged"') != -1
+      retries: "{{ retries }}"
+      delay: 3
+      changed_when: result.stdout.find('"acknowledged":true') != -1
+      args:
+        warn: False
+
+    - name: do restart
+      sudo: true
+      service: name=elasticsearch state="{{ service_status }}"
+
+    # Pause to allow service restart or for extra actions.
+    - pause:
+        minutes: "{{ sleep }}"
+      when: sleep is defined
+
+    # Use case:
+    # Hook in calls to hypervisor here,
+    # to upgrade ES node.
+
+    # Wait until Elasticsearch is responsive and listening to connection
+    - name: Wait for Elasticsearch node to restart
+      shell: "curl -I -s -m 2 http://{{ ansible_hostname }}:9200 | head -n 1"
+      register: result
+      until: result.stdout == "HTTP/1.1 200 OK"
+      retries: "{{ retries }}"
+      delay: 3
+      args:
+        warn: False
+
+    # Reenable shard allocation
+    - name: Reenable cluster routing
+      shell: "{{ manage_rebalancing }} {{ enable_rebalancing }}"
+      register: result
+      until: result.stdout.find('"acknowledged"') != -1
+      retries: "{{ retries }}"
+      delay: 3
+      changed_when: result.stdout.find('"acknowledged":true') != -1
+      args:
+        warn: False
+
+    # Wait until cluster is in healthy state before proceeding with next node
+    - name: Wait/Ensure cluster is healthy again
+      shell: "curl -s -m 2 {{ ansible_hostname }}:9200/_cat/health | cut -d ' ' -f 4"
+      register: result
+      until: result.stdout.find("green") != -1
+      retries: "{{ retries }}"
+      delay: 30
+      args:
+        warn: False
+
