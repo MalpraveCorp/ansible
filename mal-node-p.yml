@@ -1,0 +1,33 @@
+- hosts: tag_node
+  become: yes
+  roles:
+    - { role: 'roles/ansible-role-openresty', tags: ['resty'] }
+    - { role: 'DavidWittman.redis', tags: ['redis'] }
+
+  vars:
+    # TODO Stunnel or other transport encryption?
+    - redis_password: # "not-so-easy"
+    - redis_slaveof:  # "127.0.0.1  6379"
+
+  tasks:
+    - name: Create web root dir
+      file:
+        path: /var/www/html
+        state: directory
+      tags: web_dir
+
+    - name: Install OpenResty config
+      copy:
+        src: files/nginx.conf
+        dest: /etc/openresty/nginx.conf
+        force: yes
+      notify: reload openresty
+      tags: openresty
+
+    - name: Install OpenResty vhost config
+      template:
+        src: templates/vhost.conf.j2
+        dest: /etc/openresty/node-vhost.conf
+        force: yes
+      notify: reload openresty
+      tags: openresty

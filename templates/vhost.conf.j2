@@ -1,0 +1,48 @@
+server {
+
+    listen       80;
+    server_name  ~^(?<subdomain>.+)\.(?<rootdomain>.*\..*)$ ~^(?<rootdomain>.*\..*)$ _;
+
+    access_by_lua_block {
+
+        local redis = require "resty.redis"
+        local red = redis:new()
+        red:set_timeout(1000) -- 1 sec
+
+        -- connect to redis
+        local ok, err = red:connect("127.0.0.1", 6379)
+        if not ok then
+            ngx.log(ngx.WARN, "failed to connect: ", err)
+            return
+        end
+
+        -- authenticate redis connection
+        local ok, err = red:auth('{{ redis_password }}')
+        if not ok then
+             ngx.log(ngx.WARN, "failed to auth: ", err)
+             return
+         end
+
+         -- search host name in redis
+         local root, err = red:get(ngx.var.rootdomain)
+         if not root then
+             ngx.log(ngx.WARN, "failed to get host: ", err)
+             return
+         end
+
+         -- additional logic
+    }
+
+    root /var/www/html;
+    index index.php index.html;
+
+    location / {
+      try_files $uri $uri/ /index.html?$query_string;
+    }
+
+    # Credits
+    add_header X-Powered-By "Malprave Corp" always;
+    add_header X-Described-By "To one who has faith, no explanation is necessary. To one without faith, no explanation is possible." always;
+
+
+}
