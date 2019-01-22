@@ -1,0 +1,164 @@
+---
+#
+# Restore mongo dump rsyncd to "{{ mongo_dump_path }}"
+# Once done, stop mongo instances and perform
+# binary restore on remaining ACC nodes.
+#
+- name: Restore mongo database
+  hosts:
+    - "{{ to_cluster }}"
+
+  vars:
+    # SSH key names for rsync data
+    ssh_private_key: rsync-migration
+    ssh_public_key: rsync-migration.pub
+    # Backup location
+    mongo_dump_path: /var/mongo_dump
+    # Temporarily allow root ssh login
+    ssh_permitrootlogin: 'yes' # or 'no'
+    # Rsync script file name
+    rsync_name: rsync-master-to-slaves
+    # Name of database to be restored
+    restore_database: ""
+
+
+  tasks:
+    - name: Ensure mongo is started
+      service:
+        name: mongod
+        state: started
+      become: True
+      register: started_mongo
+
+    - name: Give mongo a minute to initiate and join replica set
+      pause:
+        minutes: 1
+      when: started_mongo.changed
+
+    # Get mongo master/slave for both cluster
+    - include: get_mongo_nodes.yml
+    # Define results as a 'global' variable
+    - set_fact:
+        to_mongo_master:  "{{ hostvars['localhost']['to_mongo_master'] }}"
+      delegate_to: localhost
+    # Use IP addresses instead of hostname
+    # (baseline doesn't configure cross environment hosts file)
+    - set_fact:
+        to_mongo_master:  "{{ hostvars[to_mongo_master]['ansible_default_ipv4']['address'] }}"
+      delegate_to: localhost
+
+    - debug:
+        var: to_mongo_master
+      delegate_to: localhost
+
+    - name: Test connectivity between mongo master and cluster hosts
+      wait_for:
+        host: "{{ item }}"
+        port: 22
+        timeout: 3
+      delegate_to: "{{ to_mongo_master }}"
+      with_items: "{{ play_hosts }}"
+
+    - name: Ensure .ssh dir exists for root user
+      file:
+        path: /root/.ssh
+        mode: 0700
+        state: directory
+      become: True
+      delegate_to: "{{ to_mongo_master }}"
+      run_once: true
+
+    - name: Run restore on to_mongo_master
+      shell: "mongorestore {{ mongo_dump_path }}/{{ restore_database }} --db {{ restore_database }}" # I know
+      delegate_to: "{{ to_mongo_master }}"
+      run_once: true
+      become: True
+
+    - name: Stop mongo on all hosts
+      service:
+        name: mongod
+        state: stopped
+      become: True
+
+    - name: Generate ssh keypair for rsync migration
+      shell: "ssh-keygen -b 2048 -t rsa -f /root/.ssh/{{ ssh_private_key }} -q -N ''"
+      args:
+        creates: "/root/.ssh/{{ ssh_private_key }}"
+      delegate_to: "{{ to_mongo_master }}"
+      run_once: true
+      become: True
+
+    - name: Get ssh_public_key to install authorized keyfile on to_mongo_master
+      shell: cat /root/.ssh/{{ ssh_public_key }}
+      register: ssh_public_key_data
+      delegate_to: "{{ to_mongo_master }}"
+      run_once: true
+      become: True
+
+    - name: Config authorized keys for to_mongo_master
+      authorized_key:
+        user: root
+        key: "{{ ssh_public_key_data.stdout }}"
+        state: present
+      notify:
+        - sshd_configtest
+        - sshd_reload
+      become: True
+
+    - name: (EXCEPTION) Allow root login  in sshd_config
+      replace:
+        dest: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin.*$'
+        replace: "PermitRootLogin {{ ssh_permitrootlogin }}"
+      notify:
+        - sshd_configtest
+        - sshd_reload
+      become: True
+
+    - name: Create rsync script on to_mongo_master
+      copy:
+        dest: "/root/{{ rsync_name }}"
+        mode: 0764
+        content: |
+          #!/bin/bash
+          # dirs to sync from master to slaves
+          for host in {{ play_hosts | join(' ') | difference([to_mongo_master]) }}; do
+            time rsync -e "ssh -i $HOME/.ssh/{{ ssh_private_key }}" -av --stats --human-readable /var/lib/mongodb/cpo* $host:/var/lib/mongodb/
+            time rsync -e "ssh -i $HOME/.ssh/{{ ssh_private_key }}" -av --stats --human-readable /var/lib/mongodb/loc* $host:/var/lib/mongodb/
+          done
+      delegate_to: "{{ to_mongo_master }}"
+      with_items: play_hosts
+      run_once: true
+      become: True
+
+    - name: Run rsync - Push mongo dump from donor to recipient
+      shell: "/root/{{ rsync_name }}"
+      register: rsync_output
+      delegate_to: "{{ from_mongo_slave }}"
+      run_once: true
+      become: True
+
+    - debug: var=rsync_output
+      run_once: true
+
+    - name: Restart mongo on ACC cluster
+      service:
+        name: mongod
+        state: restarted
+      become: True
+
+    # health checking, or info
+
+    - debug: msg="Mongo servers have been refreshed with production data."
+
+
+  handlers:
+    - name: sshd_configtest
+      shell: sshd -t
+      become: True
+
+    - name: sshd_reload
+      service:
+        name: sshd
+        state: reloaded
+      become: True

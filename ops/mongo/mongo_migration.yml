@@ -1,0 +1,151 @@
+"/root/{{ rsync_name }}"---
+- name: Prep mongo servers for migration
+  hosts:
+    - "{{ from_cluster }}"
+    - "{{ to_cluster }}"
+
+  vars:
+    # SSH key names for rsync data
+    ssh_private_key: rsync-migration
+    ssh_public_key: rsync-migration.pub
+    # Backup location
+    mongo_dump_path: /var/mongo_dump
+    # Temporarily allow root ssh login
+    ssh_permitrootlogin: 'yes' # or 'no'
+    # Rsync script file name
+    rsync_name: rsync-donor-to-recipient
+
+  tasks:
+    # Get mongo master/slave for both clusters
+    - include: get_mongo_nodes.yml
+    # Define results as a 'global' variable
+    - set_fact:
+        from_mongo_master: "{{ hostvars['localhost']['from_mongo_master'] }}"
+        from_mongo_slave: "{{ hostvars['localhost']['from_mongo_slave'] }}"
+        to_mongo_master:  "{{ hostvars['localhost']['to_mongo_master'] }}"
+      delegate_to: localhost
+    # Use IP addresses instead of hostname
+    # Host file is environemnt specific, won't be able to connect by hostname
+    - set_fact:
+        from_mongo_master:  "{{ hostvars[from_mongo_master]['ansible_default_ipv4']['address'] }}"
+        from_mongo_slave:   "{{ hostvars[from_mongo_slave]['ansible_default_ipv4']['address'] }}"
+        to_mongo_master:  "{{ hostvars[to_mongo_master]['ansible_default_ipv4']['address'] }}"
+      delegate_to: localhost
+
+    # Print IP addresses defined above
+    - debug:
+        var: from_mongo_slave
+      delegate_to: localhost
+
+    - debug:
+        var: to_mongo_master
+      delegate_to: localhost
+
+    - debug:
+        var: from_mongo_master
+      delegate_to: localhost
+
+    - name: Test SSH connectivity from SLAVE (backup node in donor cluster) to MASTER
+      wait_for:
+        host: "{{ to_mongo_master }}"
+        port: 22
+        timeout: 3
+      delegate_to: "{{ from_mongo_slave }}"
+      run_once: true
+
+    - name: Ensure .ssh dir exists for root user
+      file:
+        path: /root/.ssh
+        mode: 0700
+        state: directory
+      become: True
+      delegate_to: "{{ from_mongo_slave }}"
+      run_once: true
+
+    - name: Generate ssh keypair for rsync migration
+      shell: "ssh-keygen -b 2048 -t rsa -f /root/.ssh/{{ ssh_private_key }} -q -N ''"
+      args:
+        creates: "/root/.ssh/{{ ssh_private_key }}"
+      delegate_to: "{{ from_mongo_slave }}"
+      run_once: true
+      become: True
+
+    - name: Get ssh_public_key to install authorized keyfile on from_mongo_master
+      shell: cat /root/.ssh/{{ ssh_public_key }}
+      register: ssh_public_key_data
+      delegate_to: "{{ from_mongo_slave }}"
+      run_once: true
+      become: True
+
+    - name: Get list of dirs to transfer in mongo_dump_path
+      shell: ls -1 "{{ mongo_dump_path }}"
+      register: rsync_content_dirs
+      delegate_to: "{{ from_mongo_slave }}"
+      run_once: true
+      become: True
+
+    - name: Create rsync script on donor host
+      copy:
+        dest: "/root/{{ rsync_name }}"
+        mode: 0764
+        content: |
+          #!/bin/bash
+          # dirs to sync across Environements
+          for dir in {{ rsync_content_dirs.stdout_lines | join(' ') }}; do
+            time rsync -e "ssh -i $HOME/.ssh/rsync-migration" -av --stats --human-readable {{ mongo_dump_path }}/{{ item }} {{ to_mongo_master }}:{{ mongo_dump_path }}
+          done
+      delegate_to: "{{ from_mongo_slave }}"
+      with_items: rsync_content_dirs.stdout_lines
+      run_once: true
+      become: True
+
+    - name: Configure authorized keys - Allow recipient to receive connection from donor host
+      authorized_key:
+        user: root
+        key: "{{ ssh_public_key_data.stdout }}"
+        state: present
+      notify:
+        - sshd_configtest
+        - sshd_reload
+      delegate_to: "{{ to_mongo_master }}"
+      run_once: true
+      become: True
+
+    - name: (EXCEPTION) Allow root login  in sshd_config
+      replace:
+        dest: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin.*$'
+        replace: "PermitRootLogin {{ ssh_permitrootlogin }}"
+      notify:
+        - sshd_configtest
+        - sshd_reload
+      become: True
+      delegate_to: "{{ to_mongo_master }}"
+      run_once: true
+
+    - debug: msg="Mongo servers are now ready for rsync migration"
+      run_once: true
+
+    - name: Run rsync - Push mongo dump from donor to recipient
+      shell: "/root/{{ rsync_name }}"
+      register: rsync_output
+      delegate_to: "{{ from_mongo_slave }}"
+      run_once: true
+      become: True
+
+    - debug: var=rsync_output
+      run_once: true
+
+    - debug: msg="Backup was completely synched."
+      run_once: true
+
+  handlers:
+    - name: sshd_configtest
+      shell: sshd -t
+      become: True
+
+    - name: sshd_reload
+      service:
+        name: sshd
+        state: reloaded
+      become: True

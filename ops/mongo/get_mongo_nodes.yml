@@ -1,0 +1,49 @@
+---
+- set_fact: to_hosts="{{ to_hosts | default([]) + [ item ] }}"
+  when: item in groups["{{ to_cluster }}"]
+  with_items: play_hosts
+
+- set_fact: from_hosts="{{ from_hosts | default([]) + [ item ] }}"
+  when: item in groups["{{ from_cluster }}"]
+  with_items: play_hosts
+
+- block:
+
+    - name: Query mongo instances and get master
+      shell: 'echo "db.runCommand( { isMaster: 1 } )" | LC_ALL=C mongo --quiet | grep primary | cut -d ''"'' -f 4 | cut -d ":" -f 1'
+      register: output
+
+    - set_fact:
+          to_mongo_master: "{{ hostvars[to_hosts[0]]['output']['stdout'] }}"
+      when: hostvars[to_hosts[0]]['output']['stdout'] == hostvars[item]['output']['stdout']
+      with_items: to_hosts
+      delegate_to: localhost
+      delegate_facts: True
+
+  when: inventory_hostname in groups["{{ to_cluster }}"]
+
+- block:
+
+    - name: Query mongo instances and get master
+      shell: 'echo "db.runCommand( { isMaster: 1 } )" | LC_ALL=C mongo --quiet | grep primary | cut -d ''"'' -f 4 | cut -d ":" -f 1'
+      register: output
+
+    # make sure all hosts report the same master
+    # @HACK play hosts is deprecated - only available for 2.1
+    - set_fact:
+        from_mongo_master: "{{ hostvars[from_hosts[0]]['output']['stdout'] }}"
+      when: hostvars[from_hosts[0]]['output']['stdout'] == hostvars[item]['output']['stdout']
+      with_items: from_hosts
+      delegate_to: localhost
+      delegate_facts: True
+
+    # assuming this one was defined to run the backups from
+    - name: Get first slave
+      set_fact:
+        from_mongo_slave: "{{ item }}"
+      when: from_mongo_slave is undefined and from_mongo_master != item
+      with_items: "{{ play_hosts }}"
+      delegate_to: localhost
+      delegate_facts: True
+
+  when: inventory_hostname in groups["{{ from_cluster }}"]
