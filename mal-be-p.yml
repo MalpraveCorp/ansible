@@ -1,0 +1,34 @@
+- hosts: admin
+  become: yes
+
+  roles:
+      - { role: 'geerlingguy.firewall', tags: ['firewall'] }
+      - { role: 'geerlingguy.nginx', tags: ['nginx'] }
+      - { role: 'geerlingguy.php', tags: ['php'] }
+      - { role: 'DavidWittman.redis', tags: ['redis'] }
+      - { role: 'angstwad.docker_ubuntu', tags: ['docker'] }
+      - { role: 'geerlingguy.certbot', tags: ['certbot'] }
+
+  tasks:
+    - name: Install dependencies
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Install pip dependencies
+      pip:
+        name: docker-py
+        executable: pip3
+        state: present
+
+    - name: Ensure Kookaburra container is started
+      docker_container:
+        name: kookaburra
+        image: lusotycoon/kookaburra
+        pull: yes # check for updates everytime
+        state: started
+        expose:
+          - 8000
+        ports:
+          - "8000:8000"
+      become: yes

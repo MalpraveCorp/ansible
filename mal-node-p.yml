@@ -6,8 +6,7 @@
 
   vars:
     # TODO Stunnel or other transport encryption?
-    - redis_password: # "not-so-easy"
-    - redis_slaveof:  # "127.0.0.1  6379"
+    - redis_slaveof:  "" # "127.0.0.1  6379"
 
   tasks:
     - name: Create web root dir
