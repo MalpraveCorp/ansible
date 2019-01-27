@@ -1,7 +1,6 @@
 ---
-# Perform a rolling restart of an Elasticsearch cluster
-# as documented in https://www.elastic.co/guide/en/elasticsearch/guide/current/_rolling_restarts.html
-# e.g. ansible-playbook -e "service_status=stopped sleep=10 cluster_group=mal_es_p"
+# Perform a rolling restart of an Elasticsearch cluster as documented in
+# www.elastic.co/guide/en/elasticsearch/guide/current/_rolling_restarts.html
 - name: Rolling restart Elasticsearch cluster
   hosts: "{{ cluster_group }}"
   serial: 1
@@ -12,16 +11,17 @@
     retries: 200
 
     # Request payload to disable automatic shard allocation.
-    disable_rebalancing: "-d '{\"transient\" : {\"cluster.routing.allocation.enable\" : \"none\" }}'"
+    disable_rebalancing: "-d '{\"transient\" : {\"cluster.routing.allocation.enable\" : \"none\" }}'"  # yamllint disable-line rule:line-length
     # Request payload to enable automatic shard allocation.
-    enable_rebalancing: "-d '{\"transient\" : {\"cluster.routing.allocation.enable\" : \"all\" }}'"
+    enable_rebalancing: "-d '{\"transient\" : {\"cluster.routing.allocation.enable\" : \"all\" }}'"  # yamllint disable-line rule:line-length
     # Curl request to manage shard allocation.
-    manage_rebalancing: "curl -XPUT {{ ansible_hostname }}:9200/_cluster/settings -d '{{ disable_rebalancing_data }}'"
+    manage_rebalancing: "curl -XPUT {{ ansible_hostname }}:9200/_cluster/settings -d '{{ disable_rebalancing_data }}'"  # yamllint disable-line rule:line-length
 
   tasks:
-    # Prevent Elasticsearch from moving shards around while we perform planned maintenance.
+    # Prevent Elasticsearch from moving shards around
+    # while we perform planned maintenance.
     - name: Disable cluster routing
-      shell: "{{ manage_rebalancing }}" "{{ disable_rebalancing }}"
+      shell: "{{ manage_rebalancing }} {{ disable_rebalancing }}"
       register: result
       until: result.stdout.find('"acknowledged"') != -1
       retries: "{{ retries }}"
@@ -66,11 +66,10 @@
 
     # Wait until cluster is in healthy state before proceeding with next node
     - name: Wait/Ensure cluster is healthy again
-      shell: "curl -s -m 2 {{ ansible_hostname }}:9200/_cat/health | cut -d ' ' -f 4"
+      shell: "curl -s -m 2 {{ ansible_hostname }}:9200/_cat/health | cut -d ' ' -f 4"  # yamllint disable-line rule:line-length
       register: result
       until: result.stdout.find("green") != -1
       retries: "{{ retries }}"
       delay: 30
       args:
         warn: False
-

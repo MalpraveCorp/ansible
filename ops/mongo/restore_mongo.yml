@@ -10,7 +10,7 @@
 
   vars:
     # SSH key names for rsync data
-    ssh_private_key: rsync-migration
+    ssh_private_key: /root/.ssh/rsync-migration
     ssh_public_key: rsync-migration.pub
     # Backup location
     mongo_dump_path: /var/mongo_dump
@@ -39,12 +39,12 @@
     - include: get_mongo_nodes.yml
     # Define results as a 'global' variable
     - set_fact:
-        to_mongo_master:  "{{ hostvars['localhost']['to_mongo_master'] }}"
+        to_mongo_master: "{{ hostvars['localhost']['to_mongo_master'] }}"
       delegate_to: localhost
     # Use IP addresses instead of hostname
     # (baseline doesn't configure cross environment hosts file)
     - set_fact:
-        to_mongo_master:  "{{ hostvars[to_mongo_master]['ansible_default_ipv4']['address'] }}"
+        to_mongo_master: "{{ hostvars[to_mongo_master]['ansible_default_ipv4']['address'] }}"  # yamllint disable-line rule:line-length
       delegate_to: localhost
 
     - debug:
@@ -69,7 +69,7 @@
       run_once: true
 
     - name: Run restore on to_mongo_master
-      shell: "mongorestore {{ mongo_dump_path }}/{{ restore_database }} --db {{ restore_database }}" # I know
+      shell: "mongorestore {{ mongo_dump_path }}/{{ restore_database }} --db {{ restore_database }}"  # yamllint disable-line rule:line-length
       delegate_to: "{{ to_mongo_master }}"
       run_once: true
       become: True
@@ -81,9 +81,9 @@
       become: True
 
     - name: Generate ssh keypair for rsync migration
-      shell: "ssh-keygen -b 2048 -t rsa -f /root/.ssh/{{ ssh_private_key }} -q -N ''"
+      shell: "ssh-keygen -b 2048 -t rsa -f {{ ssh_private_key }} -q -N ''"
       args:
-        creates: "/root/.ssh/{{ ssh_private_key }}"
+        creates: "{{ ssh_private_key }}"
       delegate_to: "{{ to_mongo_master }}"
       run_once: true
       become: True
@@ -122,9 +122,12 @@
         content: |
           #!/bin/bash
           # dirs to sync from master to slaves
-          for host in {{ play_hosts | join(' ') | difference([to_mongo_master]) }}; do
-            time rsync -e "ssh -i $HOME/.ssh/{{ ssh_private_key }}" -av --stats --human-readable /var/lib/mongodb/cpo* $host:/var/lib/mongodb/
-            time rsync -e "ssh -i $HOME/.ssh/{{ ssh_private_key }}" -av --stats --human-readable /var/lib/mongodb/loc* $host:/var/lib/mongodb/
+          #  | difference([to_mongo_master]) doesnt work?
+          for host in {{ play_hosts | join(' ') }}; do
+            time rsync -e "ssh -i {{ ssh_private_key }}" -av --stats -h \
+              /var/lib/mongodb/cpo* $host:/var/lib/mongodb/
+            time rsync -e "ssh -i {{ ssh_private_key }}" -av --stats -h \
+              /var/lib/mongodb/loc* $host:/var/lib/mongodb/
           done
       delegate_to: "{{ to_mongo_master }}"
       with_items: play_hosts

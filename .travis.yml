@@ -6,15 +6,15 @@ cache:
   - ~/.ansible/roles
 
 before_script:
-  - sudo apt-get update -q
-  - sudo apt-get install -q python-pip
-  - pip install --upgrade --user ansible-lint ansible yamllint
-  - ansible --version
-  - ansible-lint --version
-  - ansible-galaxy install -r .requirements.yml
+ - sudo apt-get update -q
+ - sudo apt-get install -q python-pip
+ - pip install --upgrade --user ansible-lint ansible yamllint
+ - ansible --version
+ - ansible-lint --version
+ - ansible-galaxy install -r .requirements.yml
 
 jobs:
-  include:
-    - script: yamllint .
-    - script: ansible-lint *.yml
-    - script: ansible-playbook --inventory inventory --syntax-check *.yml
+ include:
+  - script: yamllint .
+  - script: ansible-lint *.yml
+  - script: ansible-playbook --inventory inventory --syntax-check *.yml
