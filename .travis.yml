@@ -13,5 +13,5 @@ jobs:
       script: ansible-lint *.yml
     
     - stage: ansible syntax check
-    - script: ansible-playbook --inventory inventory --syntax-check *.yml
+      script: ansible-playbook --inventory inventory --syntax-check *.yml
 
