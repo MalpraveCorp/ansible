@@ -1,0 +1,17 @@
+---
+before_script:
+  - apt-get install -yq  yamllint ansible-lint ansible
+  - ansible --version
+  - ansible-lint --version
+
+jobs:
+  include:
+    - stage: yaml linting
+      script: yamllint .
+
+    - stage: ansible linting
+      script: ansible-lint *.yml
+    
+    - stage: ansible syntax check
+    - script: ansible-playbook --inventory inventory --syntax-check *.yml
+
