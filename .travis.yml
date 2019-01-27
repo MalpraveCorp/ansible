@@ -3,7 +3,7 @@ dist: xenial
 cache:
  pip: true
  directories:
-   - ~/.ansible/roles
+  - ~/.ansible/roles
 
 before_script:
   - sudo apt-get update -q
@@ -18,4 +18,3 @@ jobs:
     - script: yamllint .
     - script: ansible-lint *.yml
     - script: ansible-playbook --inventory inventory --syntax-check *.yml
-

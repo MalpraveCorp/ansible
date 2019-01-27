@@ -1,12 +1,13 @@
+---
 - hosts: tag_node
-  become: yes
+  become: true
   roles:
-    - { role: 'roles/ansible-role-openresty', tags: ['resty'] }
-    - { role: 'DavidWittman.redis', tags: ['redis'] }
+    - {role: 'roles/ansible-role-openresty', tags: ['resty']}
+    - {role: 'DavidWittman.redis', tags: ['redis']}
 
   vars:
     # TODO Stunnel or other transport encryption?
-    - redis_slaveof:  "" # "127.0.0.1  6379"
+    - redis_slaveof: "" # "127.0.0.1  6379"
 
   tasks:
     - name: Create web root dir
