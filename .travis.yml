@@ -3,7 +3,7 @@ dist: xenial
 cache:
  pip: true
  directories:
-   - .ansible/roles
+   - ~/.ansible/roles
 
 before_script:
   - sudo apt-get update -q
