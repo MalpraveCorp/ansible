@@ -1,17 +1,21 @@
 ---
+dist: xenial
+cache:
+ pip: true
+ directories:
+   - ~/.ansible/roles
+
 before_script:
-  - apt-get install -yq  yamllint ansible-lint ansible
+  - sudo apt-get update -q
+  - sudo apt-get install -q python-pip
+  - pip install --upgrade --user ansible-lint ansible yamllint
   - ansible --version
   - ansible-lint --version
+  - ansible-galaxy install -r .requirements.yml
 
 jobs:
   include:
-    - stage: yaml linting
-      script: yamllint .
-
-    - stage: ansible linting
-      script: ansible-lint *.yml
-    
-    - stage: ansible syntax check
-      script: ansible-playbook --inventory inventory --syntax-check *.yml
+    - script: yamllint .
+    - script: ansible-lint *.yml
+    - script: ansible-playbook --inventory inventory --syntax-check *.yml
 
