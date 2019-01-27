@@ -7,7 +7,7 @@ before_script:
   - pip install --upgrade --user ansible-lint ansible yamllint
   - ansible --version
   - ansible-lint --version
-  - ansible-galaxy install -r requirements.yml
+  - ansible-galaxy install -r .requirements.yml
 
 jobs:
   include:
