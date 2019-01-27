@@ -1,0 +1,9 @@
+---
+- src: geerlingguy.firewall
+- src: geerlingguy.nginx
+- src: geerlingguy.php
+- src: DavidWittman.redis
+- src: angstwad.docker_ubuntu
+- src: geerlingguy.certbot
+- src: DavidWittman.redis
+
