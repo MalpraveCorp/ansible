@@ -1,4 +1,4 @@
-# Ansible playbooks for Malprave Corp   [![Build Status][buildstatus]][circleci]
+# Ansible playbooks for Malprave Corp   [![Build Status][buildstatus]][travisci]
 
 Malprave Corp uses Ansible to manage all its configuration management needs.
 
@@ -44,5 +44,5 @@ Pedro Gomes
 
 MIT
 
-[buildstatus]: https://circleci.com/gh/MalpraveCorp/ansible/tree/master.svg?style=shield
-[circleci]: https://circleci.com/gh/MalpraveCorp/ansible
+[buildstatus]: https://travis-ci.org/MalpraveCorp/ansible.svg?branch=master
+[circleci]: https://travis-ci.org/MalpraveCorp/ansible
