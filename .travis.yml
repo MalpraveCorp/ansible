@@ -1,5 +1,9 @@
 ---
 dist: xenial
+cache:
+ pip: true
+ directories:
+   - /etc/ansible/roles
 
 before_script:
   - sudo apt-get update -q
@@ -8,6 +12,7 @@ before_script:
   - ansible --version
   - ansible-lint --version
   - ansible-galaxy install -r .requirements.yml
+  - ls -lha /etc/ansible/roles || true
 
 jobs:
   include:
