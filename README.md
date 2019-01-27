@@ -45,4 +45,4 @@ Pedro Gomes
 MIT
 
 [buildstatus]: https://travis-ci.org/MalpraveCorp/ansible.svg?branch=master
-[circleci]: https://travis-ci.org/MalpraveCorp/ansible
+[travisci]: https://travis-ci.org/MalpraveCorp/ansible
