@@ -1,7 +1,9 @@
 ---
+dist: xenial
+
 before_script:
   - sudo apt-get update -q
-  - sudo apt-get install -yq  yamllint ansible-lint ansible
+  - sudo apt-get install -q  yamllint ansible-lint ansible
   - ansible --version
   - ansible-lint --version
 
