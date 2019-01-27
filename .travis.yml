@@ -4,7 +4,7 @@ dist: xenial
 before_script:
   - sudo apt-get update -q
   - sudo apt-get install -q python-pip yamllint ansible
-  - pip install ansible-lint
+  - pip install --user ansible-lint
   - ansible --version
   - ansible-lint --version
 
