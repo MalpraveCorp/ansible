@@ -11,6 +11,10 @@ Install Ansible
 ```
 pip install ansible
 ```
+Pull Ansible Roles
+```
+ansible-galaxy install -r .requirements.yml
+```
 Install Kitchen CI
 ```
 gem install test-kitchen
