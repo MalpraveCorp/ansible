@@ -11,8 +11,7 @@ before_script:
 
 jobs:
   include:
-    - stage: lint / syntax check
-      script: yamllint .
-      script: ansible-lint *.yml
-      script: ansible-playbook --inventory inventory --syntax-check *.yml
+    - script: yamllint .
+    - script: ansible-lint *.yml
+    - script: ansible-playbook --inventory inventory --syntax-check *.yml
 
