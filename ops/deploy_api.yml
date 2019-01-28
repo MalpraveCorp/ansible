@@ -1,0 +1,28 @@
+--- 
+- name: Deploy API
+  hosts: tag_api
+  become: True
+  roles:
+    - {role: '/var/sadis/roles/version/ansistrano_deploy/v2.9.0/', tags: ['deploy']}
+
+  pre_tasks:
+  # Notify/log start of deployment
+
+  tasks:
+    - name: Healthcheck application
+      uri:
+        url: "{{ healthcheck_url }}"
+        headers:
+          Host: "{{ healthcheck_host }}"
+      register: result
+      tags:
+        - healthcheck
+
+    - debug: var=result
+      tags:
+        - healthcheck
+
+  # Notify/log status reported by application
+
+  post_tasks:
+  # Notify/log end of deployment

@@ -1,0 +1,51 @@
+---
+#
+# Permissions Release
+#
+- name: Ensure correct permissions on ansistrano_release_path.stdout
+  file:
+    name: "{{ ansistrano_release_path.stdout }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: 0775
+    recurse: yes
+  become: True
+  tags: permissions
+
+#
+# Permissions Shared
+#
+- name: Ensure correct permissions on ansistrano_shared_path.stdout
+  file:
+    name: "{{ ansistrano_shared_path }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: 0775
+    recurse: yes
+  become: True
+  tags: permissions
+
+#
+# Composer
+#
+- name: Run composer install
+  shell: /usr/local/bin/composer install --no-dev
+  args:
+    chdir: "{{ ansistrano_release_path.stdout }}"
+  become: True
+  become_user: "{{ app_user }}"
+  register: composer_install
+  tags: composer - debug: msg="{{ composer_install }}" verbosity=1
+  tags: composer
+
+#
+# Migrations
+#
+- name: run migrations
+  shell: php yii migrate/up --interactive=0
+  args:
+    chdir: "{{ ansistrano_release_path.stdout }}"
+  register: migrations
+  when: ansible_hostname == "{{ primary_node }}"
+  tags:
+    - migrations
