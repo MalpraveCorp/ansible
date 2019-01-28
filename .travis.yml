@@ -20,7 +20,7 @@ jobs:
     script: yamllint .
 
   - name: Ansible Lint
-    script: ansible-lint *.yml
+    script: ansible-lint -x 405 *.yml
 
   - name: Ansible Syntax Check
     script: ansible-playbook --inventory inventory --syntax-check *.yml
