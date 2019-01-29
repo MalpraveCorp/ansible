@@ -43,8 +43,8 @@
 #
 # Migrations
 #
-- name: run migrations
-  shell: php yii migrate/up --interactive=0
+- name: Run migrations
+  shell: php artisan migrate --seed 
   args:
     chdir: "{{ ansistrano_release_path.stdout }}"
   register: migrations
