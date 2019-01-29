@@ -44,7 +44,7 @@
 # Migrations
 #
 - name: Run migrations
-  shell: php artisan migrate --seed 
+  shell: php artisan migrate --seed
   args:
     chdir: "{{ ansistrano_release_path.stdout }}"
   register: migrations
