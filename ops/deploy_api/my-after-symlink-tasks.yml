@@ -9,7 +9,7 @@
   failed_when: php_fpm_configtest.rc != 0
   tags:
     - php-fpm
-  become: True 
+  become: True
 
 - name: reload php-fpm service
   service: name=php-fpm state=reloaded

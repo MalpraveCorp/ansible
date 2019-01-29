@@ -6,5 +6,5 @@
 - src: angstwad.docker_ubuntu
 - src: geerlingguy.certbot
 - src: DavidWittman.redis
-- src: ansistrano.deploy 
+- src: ansistrano.deploy
 - src: ansistrano.rollback

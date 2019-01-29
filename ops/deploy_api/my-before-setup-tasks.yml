@@ -1,4 +1,4 @@
---- 
+---
 - name: Add GitHub key to known_hosts
   known_hosts:
     path: "/home/{{ app_user }}/.ssh/known_hosts"

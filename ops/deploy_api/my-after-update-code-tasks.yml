@@ -35,7 +35,9 @@
   become: True
   become_user: "{{ app_user }}"
   register: composer_install
-  tags: composer - debug: msg="{{ composer_install }}" verbosity=1
+  tags: composer 
+
+- debug: msg="{{ composer_install }}" verbosity=1
   tags: composer
 
 #
@@ -46,6 +48,10 @@
   args:
     chdir: "{{ ansistrano_release_path.stdout }}"
   register: migrations
-  when: ansible_hostname == "{{ primary_node }}"
   tags:
     - migrations
+
+- debug: msg="{{ migrations }}" verbosity=1
+  tags: migrations
+
+

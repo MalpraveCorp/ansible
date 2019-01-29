@@ -1,9 +1,9 @@
---- 
+---
 - name: Deploy API
   hosts: tag_api
   become: True
   roles:
-    - {role: '/var/sadis/roles/version/ansistrano_deploy/v2.9.0/', tags: ['deploy']}
+    - {role: 'ansistrano.deploy', tags: ['deploy']}
 
   pre_tasks:
   # Notify/log start of deployment
