@@ -35,7 +35,7 @@
   become: True
   become_user: "{{ app_user }}"
   register: composer_install
-  tags: composer 
+  tags: composer
 
 - debug: msg="{{ composer_install }}" verbosity=1
   tags: composer
@@ -53,5 +53,3 @@
 
 - debug: msg="{{ migrations }}" verbosity=1
   tags: migrations
-
-
