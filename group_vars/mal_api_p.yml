@@ -1,0 +1,20 @@
+---
+# ansistrano.deploy/rollback
+ansistrano_keep_releases: 6
+ansistrano_deploy_to: /var/www
+ansistrano_shared_paths:
+  - storage
+ansistrano_git_repo: git@github.com:Lusitaniae/API-Exercise.git
+# Can be the full 40 char commit hash, 'HEAD', a branch name, or a tag name
+ansistrano_git_branch: master
+# yamllint disable rule:line-length
+ansistrano_before_setup_tasks_file: "{{ playbook_dir }}/deploy_api/my-before-setup-tasks.yml"
+ansistrano_after_update_code_tasks_file: "{{ playbook_dir }}/deploy_api/my-after-update-code-tasks.yml"
+ansistrano_after_symlink_tasks_file: "{{ playbook_dir }}/deploy_api/my-after-symlink-tasks.yml"
+# yamllint enable rule:line-length
+
+# app details
+healthcheck_url: http://localhost/healthcheck
+healthcheck_host: api.malprave.com
+app_user: api
+app_group: api

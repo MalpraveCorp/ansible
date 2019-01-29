@@ -1,0 +1,18 @@
+---
+#
+# Reload FPM
+#
+- name: php-fpm configtest
+  command: php-fpm -t
+  register: php_fpm_configtest
+  changed_when: php_fpm_configtest.rc != 0
+  failed_when: php_fpm_configtest.rc != 0
+  tags:
+    - php-fpm
+  become: True
+
+- name: reload php-fpm service
+  service: name=php-fpm state=reloaded
+  tags:
+    - php-fpm
+  become: True

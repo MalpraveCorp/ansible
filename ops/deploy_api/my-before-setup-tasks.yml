@@ -1,0 +1,8 @@
+---
+- name: Add GitHub key to known_hosts
+  known_hosts:
+    path: "/home/{{ app_user }}/.ssh/known_hosts"
+    name: github.com
+    key: "{{ known_hosts_github }}"
+  become: True
+  become_user: "{{ app_user }}"
