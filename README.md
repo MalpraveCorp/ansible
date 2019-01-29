@@ -2,6 +2,8 @@
 
 Malprave Corp uses Ansible to manage all its configuration management needs.
 
+Based on a mutable infrastructure paradigm.
+
 ## Get Started
 Pull repo
 ```
@@ -39,6 +41,7 @@ In `ops/` you can find a multitude of playbooks for various operational tasks.
 
  - Rolling ES: Perform a rolling restart of a ES cluster
  - Sync Mongo: Sync your mongo cluster across environments.
+ - Deployments: Application deployments based on Ansistrano.
 
 ## Author
 
